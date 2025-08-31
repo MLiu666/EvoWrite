@@ -204,7 +204,7 @@ function App() {
                 <Bot className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">SAGE EFL Writing Assistant</h1>
+                <h1 className="text-xl font-bold text-gray-900">Evowrite</h1>
                 <p className="text-sm text-gray-600">Welcome back, {currentLearner.name || 'Learner'}</p>
               </div>
             </div>
