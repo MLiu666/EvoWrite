@@ -231,6 +231,20 @@ function App() {
                   </div>
                   
                   <div>
+                    <Label htmlFor="createUserId" className="text-sm font-medium text-gray-700">
+                      User ID
+                    </Label>
+                    <Input
+                      id="createUserId"
+                      type="text"
+                      value={loginForm.userId}
+                      onChange={(e) => setLoginForm(prev => ({ ...prev, userId: e.target.value }))}
+                      placeholder="Enter your user ID"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
                     <Label htmlFor="name" className="text-sm font-medium text-gray-700">
                       Full Name
                     </Label>
@@ -261,7 +275,7 @@ function App() {
                   <div className="flex space-x-3">
                     <Button
                       onClick={handleCreateAccount}
-                      disabled={isLoading || !loginForm.name.trim() || !loginForm.password.trim()}
+                      disabled={isLoading || !loginForm.userId.trim() || !loginForm.name.trim() || !loginForm.password.trim()}
                       className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
