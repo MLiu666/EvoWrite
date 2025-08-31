@@ -34,18 +34,10 @@ function App() {
     try {
       setIsLoading(true);
       
-      // Try to get existing learner
-      const response = await fetch(`/api/sage/learners/${loginForm.userId}`);
+      // For demo purposes, show create account option
+      // In a real app, this would check against a database
+      setIsCreatingAccount(true);
       
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentLearner(data.learner);
-      } else if (response.status === 404) {
-        // Learner doesn't exist, show create account option
-        setIsCreatingAccount(true);
-      } else {
-        console.error('Failed to fetch learner');
-      }
     } catch (error) {
       console.error('Error during login:', error);
     } finally {
@@ -59,28 +51,24 @@ function App() {
     try {
       setIsLoading(true);
       
-      const response = await fetch('/api/sage/learners', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: loginForm.userId,
-          name: loginForm.name,
-          course_type: 'IRW', // Default course type
-          proficiency_level: 'intermediate',
-          preferred_language: 'en'
-        }),
-      });
-
-      const data = await response.json();
+      // Create learner locally without API call
+      const newLearner = {
+        id: loginForm.userId,
+        name: loginForm.name,
+        course_type: 'IRW',
+        proficiency_level: 'intermediate',
+        preferred_language: 'en',
+        created_at: new Date().toISOString(),
+        progress: {
+          writing_score: 3.5,
+          sessions_completed: 0,
+          total_time: 0
+        }
+      };
       
-      if (response.ok) {
-        setCurrentLearner(data.learner);
-        setIsCreatingAccount(false);
-      } else {
-        console.error('Failed to create learner:', data.error);
-      }
+      setCurrentLearner(newLearner);
+      setIsCreatingAccount(false);
+      
     } catch (error) {
       console.error('Error creating account:', error);
     } finally {
@@ -118,10 +106,10 @@ function App() {
                 <Bot className="w-12 h-12 text-white" />
               </div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                SAGE EFL Writing Assistant
+                EvoWrite
               </CardTitle>
               <p className="text-gray-600 mt-2">
-                AI-Powered Self-Regulated Learning Platform
+                AI-Powered Learning Platform
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
