@@ -49,7 +49,7 @@ const ChatInterface = ({ learnerId, sessionId, onSessionUpdate }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/sage/chat', {
+      const response = await fetch('http://localhost:5000/api/sage/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

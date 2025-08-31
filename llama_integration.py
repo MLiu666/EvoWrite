@@ -433,3 +433,47 @@ Please provide exactly 5 prompts, numbered 1-5."""
         except Exception:
             return False
 
+    def generate_educational_response(self, user_input: str, proficiency_level: str = 'intermediate', course_type: str = 'IRW') -> Dict:
+        """
+        Generate a simple educational response for chat.
+        
+        Args:
+            user_input: The user's message
+            proficiency_level: Learner's proficiency level
+            course_type: Type of course
+            
+        Returns:
+            Dictionary containing the response and metadata
+        """
+        try:
+            # Use the existing generate_response method
+            learner_profile = {
+                'proficiency_level': proficiency_level,
+                'course_type': course_type,
+                'preferred_language': 'en'
+            }
+            
+            context = {}
+            
+            # For now, use 'Answer' intent for all chat messages
+            response = self.generate_response('Answer', user_input, learner_profile, context)
+            
+            return {
+                'content': response['content'],
+                'intent': response['intent'],
+                'confidence': 0.9,
+                'srl_suggestion': response.get('srl_strategy', 'Keep practicing!'),
+                'suggestions': []
+            }
+            
+        except Exception as e:
+            print(f"Error generating educational response: {e}")
+            # Fallback response
+            return {
+                'content': f"I'm here to help you with your {course_type} writing! Your message was: '{user_input}'. Please try asking a specific question about writing, grammar, or essay structure.",
+                'intent': 'Answer',
+                'confidence': 0.7,
+                'srl_suggestion': 'Keep practicing!',
+                'suggestions': ['Ask about grammar', 'Ask about essay structure', 'Ask about vocabulary']
+            }
+
