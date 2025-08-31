@@ -80,8 +80,15 @@ function App() {
   };
 
   const handleCreateAccount = async () => {
+    console.log('Form data:', loginForm); // Debug log
     if (!loginForm.userId.trim() || !loginForm.name.trim() || !loginForm.email.trim() || !loginForm.password.trim()) {
       alert('Please fill in all fields');
+      console.log('Missing fields:', {
+        userId: loginForm.userId.trim(),
+        name: loginForm.name.trim(),
+        email: loginForm.email.trim(),
+        password: loginForm.password.trim()
+      });
       return;
     }
 
@@ -134,8 +141,11 @@ function App() {
     
     setCurrentLearner(null);
     setCurrentSession(null);
-    setLoginForm({ userId: '', name: '' });
+    setLoginForm({ userId: '', name: '', email: '', password: '' });
     setIsCreatingAccount(false);
+    setIsForgotPassword(false);
+    setVerificationSent(false);
+    setVerificationCode('');
   };
 
   const handleSessionCreate = (session) => {
@@ -255,6 +265,13 @@ function App() {
     }
   };
 
+  const resetFormState = () => {
+    setLoginForm({ userId: '', name: '', email: '', password: '' });
+    setVerificationCode('');
+    setVerificationSent(false);
+    setIsVerifying(false);
+  };
+
   if (!currentLearner) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
@@ -319,14 +336,20 @@ function App() {
                   <div className="flex justify-between items-center text-sm">
                     <button
                       type="button"
-                      onClick={() => setIsForgotPassword(true)}
+                      onClick={() => {
+                        setIsForgotPassword(true);
+                        resetFormState();
+                      }}
                       className="text-blue-600 hover:text-blue-800 underline"
                     >
                       Forgot Password?
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsCreatingAccount(true)}
+                      onClick={() => {
+                        setIsCreatingAccount(true);
+                        resetFormState();
+                      }}
                       className="text-blue-600 hover:text-blue-800 underline"
                     >
                       Create Account
@@ -380,7 +403,10 @@ function App() {
                     <div className="text-center">
                       <button
                         type="button"
-                        onClick={() => setIsForgotPassword(false)}
+                        onClick={() => {
+                          setIsForgotPassword(false);
+                          resetFormState();
+                        }}
                         className="text-blue-600 hover:text-blue-800 underline text-sm"
                       >
                         Back to Login
@@ -512,7 +538,10 @@ function App() {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => setIsCreatingAccount(false)}
+                          onClick={() => {
+                            setIsCreatingAccount(false);
+                            resetFormState();
+                          }}
                           className="flex-1"
                         >
                           Cancel
