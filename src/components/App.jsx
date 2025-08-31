@@ -28,14 +28,39 @@ function App() {
   const [loginForm, setLoginForm] = useState({ userId: '', name: '' });
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
+  // Check for existing user on app startup
+  useEffect(() => {
+    const savedUser = localStorage.getItem('evowrite_user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setCurrentLearner(user);
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('evowrite_user');
+      }
+    }
+  }, []);
+
   const handleLogin = async () => {
     if (!loginForm.userId.trim()) return;
 
     try {
       setIsLoading(true);
       
-      // For demo purposes, show create account option
-      // In a real app, this would check against a database
+      // Check localStorage for existing user
+      const savedUser = localStorage.getItem('evowrite_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user.id === loginForm.userId) {
+          // User exists, log them in
+          setCurrentLearner(user);
+          setIsCreatingAccount(false);
+          return;
+        }
+      }
+      
+      // User doesn't exist, show create account option
       setIsCreatingAccount(true);
       
     } catch (error) {
@@ -66,6 +91,9 @@ function App() {
         }
       };
       
+      // Save to localStorage
+      localStorage.setItem('evowrite_user', JSON.stringify(newLearner));
+      
       setCurrentLearner(newLearner);
       setIsCreatingAccount(false);
       
@@ -77,6 +105,9 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem('evowrite_user');
+    
     setCurrentLearner(null);
     setCurrentSession(null);
     setLoginForm({ userId: '', name: '' });
@@ -90,6 +121,19 @@ function App() {
   const handleSessionUpdate = (data) => {
     // Handle session updates from chat interface
     console.log('Session updated:', data);
+    
+    // Update user progress and save to localStorage
+    if (currentLearner) {
+      const updatedLearner = {
+        ...currentLearner,
+        progress: {
+          ...currentLearner.progress,
+          sessions_completed: (currentLearner.progress.sessions_completed || 0) + 1
+        }
+      };
+      setCurrentLearner(updatedLearner);
+      localStorage.setItem('evowrite_user', JSON.stringify(updatedLearner));
+    }
   };
 
   if (!currentLearner) {
