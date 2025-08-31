@@ -43,20 +43,20 @@ const LearnerProfile = ({ learnerId, onProfileUpdate }) => {
   const fetchProfile = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/sage/learners/${learnerId}`);
-      const data = await response.json();
-      
-      if (response.ok) {
-        setProfile(data.learner);
-        setFormData({
-          name: data.learner.name || '',
-          course_type: data.learner.course_type || '',
-          proficiency_level: data.learner.proficiency_level || '',
-          preferred_language: data.learner.preferred_language || '',
-          learning_goals: data.learner.learning_goals || ''
-        });
-      } else {
-        console.error('Failed to fetch profile:', data.error);
+      // Get profile from localStorage instead of API
+      const savedUser = localStorage.getItem('evowrite_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user.id === learnerId) {
+          setProfile(user);
+          setFormData({
+            name: user.name || '',
+            course_type: user.course_type || '',
+            proficiency_level: user.proficiency_level || '',
+            preferred_language: user.preferred_language || '',
+            learning_goals: user.learning_goals || ''
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -68,24 +68,25 @@ const LearnerProfile = ({ learnerId, onProfileUpdate }) => {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const response = await fetch(`/api/sage/learners/${learnerId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setProfile(data.learner);
-        setIsEditing(false);
-        if (onProfileUpdate) {
-          onProfileUpdate(data.learner);
+      // Update profile in localStorage instead of API
+      const savedUser = localStorage.getItem('evowrite_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user.id === learnerId) {
+          const updatedUser = {
+            ...user,
+            ...formData
+          };
+          
+          // Save updated user to localStorage
+          localStorage.setItem('evowrite_user', JSON.stringify(updatedUser));
+          
+          setProfile(updatedUser);
+          setIsEditing(false);
+          if (onProfileUpdate) {
+            onProfileUpdate(updatedUser);
+          }
         }
-      } else {
-        console.error('Failed to update profile:', data.error);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
