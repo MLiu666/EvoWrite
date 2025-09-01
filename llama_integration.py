@@ -1,6 +1,14 @@
 """
-Meta-Llama-3-8B-Instruct Integration
-Handles integration with the Meta-Llama-3-8B-Instruct model for generating educational content.
+Meta Llama Instruct Integration (Hugging Face + OpenAI-compatible)
+Provides integration with Meta Llama Instruct models via Hugging Face Transformers
+pipeline by default, with an optional OpenAI-compatible HTTP fallback.
+
+Environment variables:
+- LLAMA_PROVIDER: "hf" (default) or "openai"
+- LLAMA_HF_MODEL_ID: HF model id (default: "meta-llama/Llama-3.2-1B-Instruct")
+- HF_TOKEN / HUGGINGFACEHUB_API_TOKEN: Hugging Face access token for gated models
+- OPENAI_API_KEY: API key for OpenAI-compatible providers
+- OPENAI_API_BASE: Base URL for OpenAI-compatible API
 """
 
 import os
@@ -9,16 +17,41 @@ import requests
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
+# Lazy imports for Transformers to avoid heavy import failures in limited envs
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    import torch
+except Exception:  # pragma: no cover - optional at runtime
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+    pipeline = None
+    torch = None
+
 class LlamaIntegration:
     """
-    Integration class for Meta-Llama-3-8B-Instruct model.
-    Provides educational content generation and writing assistance.
+    Integration class for Meta Llama Instruct models.
+    Defaults to Hugging Face Transformers using a small instruct model for efficiency,
+    with an OpenAI-compatible HTTP fallback if configured.
     """
     
     def __init__(self):
+        # Provider selection
+        self.provider = os.getenv('LLAMA_PROVIDER', 'hf').lower()
+
+        # HF configuration
+        self.hf_model_id = os.getenv('LLAMA_HF_MODEL_ID', 'meta-llama/Llama-3.2-1B-Instruct')
+        self.hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACEHUB_API_TOKEN')
+
+        # OpenAI-compatible configuration
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        # For reporting which model was used
+        self.model_name = self.hf_model_id if self.provider == 'hf' else "meta-llama/Meta-Llama-3-8B-Instruct"
+
+        # Initialize HF pipeline if selected
+        self._hf_pipeline = None
+        if self.provider == 'hf':
+            self._initialize_hf_pipeline()
         
         # Educational prompts for different intent types
         self.educational_prompts = self._initialize_educational_prompts()
@@ -185,36 +218,90 @@ class LlamaIntegration:
             # Fallback response if LLM fails
             return self._generate_fallback_response(intent, user_input, learner_profile)
     
+    def _initialize_hf_pipeline(self) -> None:
+        """Initialize Hugging Face Transformers text-generation pipeline if available."""
+        if pipeline is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+            # Transformers not available; defer to fallback
+            return
+
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(self.hf_model_id, use_auth_token=self.hf_token)
+
+            # Prefer float16 if CUDA is available
+            dtype = torch.float16 if (torch is not None and torch.cuda.is_available()) else None
+
+            model = AutoModelForCausalLM.from_pretrained(
+                self.hf_model_id,
+                torch_dtype=dtype,
+                device_map='auto',
+                use_auth_token=self.hf_token
+            )
+
+            self._hf_pipeline = pipeline(
+                task='text-generation',
+                model=model,
+                tokenizer=tokenizer,
+                device_map='auto'
+            )
+        except Exception as e:  # pragma: no cover
+            print(f"Failed to initialize HF pipeline for {self.hf_model_id}: {e}")
+            self._hf_pipeline = None
+
     def _call_llm(self, prompt: str, learner_profile: Dict) -> str:
         """
-        Make API call to Meta-Llama-3-8B-Instruct model.
-        
-        Args:
-            prompt: The formatted prompt
-            learner_profile: Learner's profile for personalization
-            
-        Returns:
-            Generated response text
+        Generate a response using the configured provider.
         """
+        # Prefer HF pipeline when selected and available
+        if self.provider == 'hf' and self._hf_pipeline is not None:
+            try:
+                # Control generation based on proficiency
+                proficiency = learner_profile.get('proficiency_level', 'intermediate')
+                if proficiency == 'beginner':
+                    max_new_tokens = 300
+                    temperature = 0.3
+                elif proficiency == 'advanced':
+                    max_new_tokens = 600
+                    temperature = 0.7
+                else:
+                    max_new_tokens = 450
+                    temperature = 0.5
+
+                # Many Llama instruct models include a chat template; send prompt directly for simplicity
+                outputs = self._hf_pipeline(
+                    prompt,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                    do_sample=True,
+                    top_p=0.9,
+                    repetition_penalty=1.05,
+                    eos_token_id=self._hf_pipeline.tokenizer.eos_token_id
+                )
+                text = outputs[0]['generated_text']
+                # Remove the original prompt prefix if the model echoes it
+                if text.startswith(prompt):
+                    text = text[len(prompt):].strip()
+                return text.strip()
+            except Exception as e:  # fall through to HTTP fallback
+                print(f"HF generation failed, falling back to HTTP provider: {e}")
+
+        # HTTP OpenAI-compatible fallback
         try:
             headers = {
                 'Authorization': f'Bearer {self.api_key}',
                 'Content-Type': 'application/json'
             }
-            
-            # Adjust parameters based on proficiency level
+
             proficiency = learner_profile.get('proficiency_level', 'intermediate')
-            
             if proficiency == 'beginner':
                 max_tokens = 300
                 temperature = 0.3
             elif proficiency == 'advanced':
                 max_tokens = 600
                 temperature = 0.7
-            else:  # intermediate
+            else:
                 max_tokens = 450
                 temperature = 0.5
-            
+
             payload = {
                 'model': self.model_name,
                 'messages': [
@@ -233,20 +320,19 @@ class LlamaIntegration:
                 'frequency_penalty': 0.1,
                 'presence_penalty': 0.1
             }
-            
+
             response = requests.post(
                 f'{self.api_base}/chat/completions',
                 headers=headers,
                 json=payload,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 return result['choices'][0]['message']['content'].strip()
             else:
                 raise Exception(f"API call failed with status {response.status_code}: {response.text}")
-                
         except Exception as e:
             print(f"Error calling LLM: {str(e)}")
             raise e
@@ -407,29 +493,51 @@ Please provide exactly 5 prompts, numbered 1-5."""
             ]
     
     def check_model_availability(self) -> bool:
-        """Check if the Meta-Llama-3-8B-Instruct model is available."""
+        """Check if the configured model/provider is available.
+        If HF pipeline is unavailable, attempt HTTP fallback when API key is present.
+        """
+        if self.provider == 'hf':
+            if self._hf_pipeline is not None:
+                return True
+            # Try HTTP fallback if configured
+            if self.api_key:
+                try:
+                    headers = {
+                        'Authorization': f'Bearer {self.api_key}',
+                        'Content-Type': 'application/json'
+                    }
+                    payload = {
+                        'model': self.model_name,
+                        'messages': [{'role': 'user', 'content': 'Hello'}],
+                        'max_tokens': 5
+                    }
+                    response = requests.post(
+                        f'{self.api_base}/chat/completions',
+                        headers=headers,
+                        json=payload,
+                        timeout=10
+                    )
+                    return response.status_code == 200
+                except Exception:
+                    return False
+            return False
         try:
             headers = {
                 'Authorization': f'Bearer {self.api_key}',
                 'Content-Type': 'application/json'
             }
-            
-            # Simple test call
             payload = {
                 'model': self.model_name,
                 'messages': [{'role': 'user', 'content': 'Hello'}],
-                'max_tokens': 10
+                'max_tokens': 5
             }
-            
             response = requests.post(
                 f'{self.api_base}/chat/completions',
                 headers=headers,
                 json=payload,
                 timeout=10
             )
-            
             return response.status_code == 200
-            
         except Exception:
             return False
 

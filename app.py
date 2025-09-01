@@ -37,6 +37,10 @@ def chat():
             'course_type': 'IRW'
         }
         
+        # Ensure model availability
+        if not llama.check_model_availability():
+            return jsonify({'error': 'Model not available'}), 503
+
         # Generate response using Llama model
         response_data = llama.generate_educational_response(
             user_input=user_message,
