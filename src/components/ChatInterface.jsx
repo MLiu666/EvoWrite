@@ -190,7 +190,7 @@ const ChatInterface = ({ learnerId, sessionId, onSessionUpdate }) => {
               >
                 <Card className={`${
                   message.type === 'user' 
-                    ? 'ml-auto max-w-2xl bg-blue-500 text-white' 
+                    ? 'ml-auto max-w-2xl bg-blue-100 text-black' 
                     : message.type === 'error'
                     ? 'mr-auto max-w-2xl bg-red-50 border-red-200'
                     : 'mr-auto max-w-3xl bg-white shadow-sm'
@@ -199,13 +199,13 @@ const ChatInterface = ({ learnerId, sessionId, onSessionUpdate }) => {
                     <div className="flex items-start space-x-3">
                       <div className={`p-2 rounded-full ${
                         message.type === 'user' 
-                          ? 'bg-blue-600' 
+                          ? 'bg-blue-200' 
                           : message.type === 'error'
                           ? 'bg-red-100'
                           : 'bg-gradient-to-r from-indigo-500 to-purple-600'
                       }`}>
                         {message.type === 'user' ? (
-                          <User className="w-4 h-4 text-white" />
+                          <User className="w-4 h-4 text-black" />
                         ) : message.type === 'error' ? (
                           <AlertCircle className="w-4 h-4 text-red-500" />
                         ) : (
@@ -216,19 +216,19 @@ const ChatInterface = ({ learnerId, sessionId, onSessionUpdate }) => {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className={`text-sm font-medium ${
-                            message.type === 'user' ? 'text-blue-100' : 'text-gray-900'
+                            message.type === 'user' ? 'text-black' : 'text-gray-900'
                           }`}>
                             {message.type === 'user' ? 'You' : message.type === 'error' ? 'Error' : 'SAGE Assistant'}
                           </span>
                           <span className={`text-xs ${
-                            message.type === 'user' ? 'text-blue-200' : 'text-gray-500'
+                            message.type === 'user' ? 'text-black/70' : 'text-gray-500'
                           }`}>
                             {message.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
                         
                         <div className={`prose prose-sm max-w-none ${
-                          message.type === 'user' ? 'text-white' : 'text-gray-700'
+                          message.type === 'user' ? 'text-black' : 'text-gray-700'
                         }`}>
                           <p className="whitespace-pre-wrap">{message.content}</p>
                         </div>
